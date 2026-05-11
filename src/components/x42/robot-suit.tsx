@@ -1,8 +1,21 @@
 "use client";
 
-import { type ReactNode, Suspense, useEffect, useRef } from "react";
+import {
+  type ElementRef,
+  type ReactNode,
+  Suspense,
+  useEffect,
+  useRef
+} from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { ContactShadows, Edges, Float, Grid, OrbitControls } from "@react-three/drei";
+import {
+  ContactShadows,
+  Edges,
+  Environment,
+  Float,
+  Grid,
+  OrbitControls
+} from "@react-three/drei";
 import * as THREE from "three";
 import { type SuitPart, useSuitStore } from "@/lib/suit-store";
 
@@ -12,102 +25,322 @@ type ArmorMeshProps = {
   position?: THREE.Vector3Tuple;
   rotation?: THREE.Vector3Tuple;
   scale?: THREE.Vector3Tuple;
+  emissiveBoost?: number;
 };
 
 export function RobotSuitCanvas() {
-  const controls = useRef<any>(null);
+  const controls = useRef<ElementRef<typeof OrbitControls>>(null);
 
   useEffect(() => {
     const handleReset = () => controls.current?.reset();
     window.addEventListener("x42-reset-view", handleReset);
+
     return () => window.removeEventListener("x42-reset-view", handleReset);
   }, []);
 
   return (
-    <Canvas shadows dpr={[1, 1.8]} camera={{ position: [0, 0.7, 6.2], fov: 38 }} gl={{ antialias: true, alpha: true }}>
+    <Canvas
+      shadows
+      dpr={[1, 2]}
+      camera={{ position: [0, 0.7, 6.4], fov: 36 }}
+      gl={{ antialias: true, alpha: true }}
+    >
       <color attach="background" args={["#030706"]} />
-      <fog attach="fog" args={["#030706", 6.5, 14]} />
-      <ambientLight intensity={0.42} />
-      <spotLight castShadow position={[3.5, 5, 4]} angle={0.36} penumbra={0.6} intensity={3.2} color="#c7fff7" />
-      <pointLight position={[-3, 1.5, 2.2]} intensity={1.2} color="#ffc857" />
-      <pointLight position={[3, 0.6, -1.2]} intensity={1.2} color="#55f0dd" />
+      <fog attach="fog" args={["#030706", 7, 15]} />
+
+      <ambientLight intensity={0.28} />
+      <hemisphereLight args={["#c7fff7", "#06110f", 0.75]} />
+      <spotLight
+        castShadow
+        position={[3.4, 5.2, 4.2]}
+        angle={0.34}
+        penumbra={0.65}
+        intensity={4.3}
+        color="#d9fff9"
+      />
+      <spotLight
+        position={[-4.2, 2.4, 2.7]}
+        angle={0.46}
+        penumbra={0.7}
+        intensity={1.8}
+        color="#ffc857"
+      />
+      <pointLight position={[0, 1.4, 2.5]} intensity={1.4} color="#55f0dd" />
+      <pointLight position={[2.4, -1.2, -1.8]} intensity={1.2} color="#67e8f9" />
+
       <Suspense fallback={null}>
+        <Environment preset="city" environmentIntensity={0.65} />
         <LabScaffold />
+        <HologramFloor />
         <RobotRig />
-        <ContactShadows position={[0, -2.18, 0]} opacity={0.42} scale={6} blur={2.2} far={4} />
-        <Grid
-          args={[10, 10]}
-          position={[0, -2.2, 0]}
-          cellSize={0.45}
-          cellThickness={0.45}
-          cellColor="#2dd4bf"
-          sectionSize={1.8}
-          sectionThickness={1}
-          sectionColor="#facc15"
-          fadeDistance={8}
-          fadeStrength={1.5}
-          infiniteGrid
+        <ContactShadows
+          position={[0, -2.25, 0]}
+          opacity={0.5}
+          scale={7}
+          blur={2.4}
+          far={4}
         />
       </Suspense>
-      <OrbitControls ref={controls} enablePan={false} minDistance={4.2} maxDistance={8} minPolarAngle={Math.PI * 0.18} maxPolarAngle={Math.PI * 0.68} />
+
+      <OrbitControls
+        ref={controls}
+        enableDamping
+        dampingFactor={0.08}
+        enablePan={false}
+        enableZoom
+        zoomSpeed={0.85}
+        rotateSpeed={0.72}
+        minDistance={3.6}
+        maxDistance={8.4}
+        minPolarAngle={Math.PI * 0.12}
+        maxPolarAngle={Math.PI * 0.74}
+        target={[0, -0.18, 0]}
+      />
     </Canvas>
   );
 }
 
 function RobotRig() {
   const group = useRef<THREE.Group>(null);
+  const autoRotationSpeed = useRef(0);
   const colors = useSuitStore((state) => state.colors);
   const rotationEnabled = useSuitStore((state) => state.rotationEnabled);
   const upgrade = useSuitStore((state) => state.upgrade);
+  const reactorOutput = useSuitStore((state) => state.reactorOutput);
 
   useFrame((state, delta) => {
-    if (!group.current) return;
-    if (rotationEnabled) group.current.rotation.y += delta * 0.22;
+    if (!group.current) {
+      return;
+    }
+
+    autoRotationSpeed.current = THREE.MathUtils.damp(
+      autoRotationSpeed.current,
+      rotationEnabled ? 0.34 : 0,
+      3.2,
+      delta
+    );
+    group.current.rotation.y += autoRotationSpeed.current * delta;
     group.current.position.y = Math.sin(state.clock.elapsedTime * 1.15) * 0.035;
   });
 
   return (
-    <Float speed={1.3} rotationIntensity={0.04} floatIntensity={0.12}>
-      <group ref={group} position={[0, 0.04, 0]}>
-        <pointLight position={[0, 0.55, 0.45]} intensity={1.8} distance={4.5} color={colors.reactor} />
+    <Float speed={1.1} rotationIntensity={0.025} floatIntensity={0.08}>
+      <group ref={group} position={[0, 0.03, 0]}>
+        <pointLight
+          position={[0, 0.16, 0.72]}
+          intensity={1.2 + reactorOutput / 52}
+          distance={5}
+          color={colors.reactor}
+        />
+        <pointLight
+          position={[0, 1.04, 0.58]}
+          intensity={1.2}
+          distance={2}
+          color={colors.reactor}
+        />
 
-        <ArmorMesh part="legs" position={[-0.46, -1.45, 0]}><boxGeometry args={[0.36, 0.92, 0.38]} /></ArmorMesh>
-        <ArmorMesh part="legs" position={[0.46, -1.45, 0]}><boxGeometry args={[0.36, 0.92, 0.38]} /></ArmorMesh>
-        <ArmorMesh part="legs" position={[-0.46, -2.02, 0.08]}><boxGeometry args={[0.5, 0.22, 0.72]} /></ArmorMesh>
-        <ArmorMesh part="legs" position={[0.46, -2.02, 0.08]}><boxGeometry args={[0.5, 0.22, 0.72]} /></ArmorMesh>
-
-        <ArmorMesh part="chest" position={[0, -0.62, 0]}><boxGeometry args={[0.92, 0.48, 0.52]} /></ArmorMesh>
-        <ArmorMesh part="chest" position={[0, 0.08, 0]}><boxGeometry args={[1.18, 1.1, 0.6]} /></ArmorMesh>
-        <ArmorMesh part="chest" position={[0, -1.02, 0]}><boxGeometry args={[1.0, 0.28, 0.56]} /></ArmorMesh>
-
-        <ArmorMesh part="shoulders" position={[-0.92, 0.56, 0]} rotation={[0, 0, -0.14]}><boxGeometry args={[0.62, 0.28, 0.58]} /></ArmorMesh>
-        <ArmorMesh part="shoulders" position={[0.92, 0.56, 0]} rotation={[0, 0, 0.14]}><boxGeometry args={[0.62, 0.28, 0.58]} /></ArmorMesh>
-
-        <ArmorMesh part="arms" position={[-1.2, -0.04, 0]} rotation={[0, 0, -0.16]}><cylinderGeometry args={[0.18, 0.2, 0.82, 20]} /></ArmorMesh>
-        <ArmorMesh part="arms" position={[1.2, -0.04, 0]} rotation={[0, 0, 0.16]}><cylinderGeometry args={[0.18, 0.2, 0.82, 20]} /></ArmorMesh>
-        <ArmorMesh part="arms" position={[-1.34, -0.62, 0.02]} rotation={[0, 0, -0.08]}><boxGeometry args={[0.3, 0.58, 0.34]} /></ArmorMesh>
-        <ArmorMesh part="arms" position={[1.34, -0.62, 0.02]} rotation={[0, 0, 0.08]}><boxGeometry args={[0.3, 0.58, 0.34]} /></ArmorMesh>
-
-        <ArmorMesh part="helmet" position={[0, 1.08, 0]}><boxGeometry args={[0.68, 0.58, 0.56]} /></ArmorMesh>
-        <mesh castShadow position={[0, 1.1, 0.3]}>
-          <boxGeometry args={[0.48, 0.12, 0.04]} />
-          <meshStandardMaterial color="#021110" emissive={colors.reactor} emissiveIntensity={0.7} metalness={0.5} roughness={0.18} />
-        </mesh>
-
-        <ArmorMesh part="reactor" position={[0, 0.2, 0.34]}><torusGeometry args={[0.24, 0.035, 18, 72]} /></ArmorMesh>
-        <mesh castShadow position={[0, 0.2, 0.35]}>
-          <sphereGeometry args={[0.11, 32, 32]} />
-          <meshStandardMaterial color={colors.reactor} emissive={colors.reactor} emissiveIntensity={1.5} metalness={0.25} roughness={0.16} />
-        </mesh>
-
-        <WeaponModule />
+        <ChestAssembly />
+        <Helmet />
+        <Shoulders />
+        <Arm side={-1} />
+        <Arm side={1} />
+        <Leg side={-1} />
+        <Leg side={1} />
+        <BackReactor />
         <UpgradeModule upgrade={upgrade} />
       </group>
     </Float>
   );
 }
 
-function ArmorMesh({ part, children, position, rotation, scale }: ArmorMeshProps) {
+function ChestAssembly() {
+  const colors = useSuitStore((state) => state.colors);
+
+  return (
+    <group>
+      <ArmorMesh part="chest" position={[0, 0.15, 0]}>
+        <boxGeometry args={[1.16, 1.1, 0.62]} />
+      </ArmorMesh>
+      <ArmorMesh part="chest" position={[0, -0.56, 0.02]} rotation={[0, 0, 0]}>
+        <boxGeometry args={[0.9, 0.44, 0.52]} />
+      </ArmorMesh>
+      <ArmorMesh part="chest" position={[-0.34, 0.27, 0.34]} rotation={[0.06, 0.1, 0.08]}>
+        <boxGeometry args={[0.4, 0.72, 0.08]} />
+      </ArmorMesh>
+      <ArmorMesh part="chest" position={[0.34, 0.27, 0.34]} rotation={[0.06, -0.1, -0.08]}>
+        <boxGeometry args={[0.4, 0.72, 0.08]} />
+      </ArmorMesh>
+
+      <ArmorMesh part="reactor" position={[0, 0.19, 0.37]} emissiveBoost={0.95}>
+        <torusGeometry args={[0.24, 0.035, 18, 80]} />
+      </ArmorMesh>
+      <mesh castShadow position={[0, 0.19, 0.39]}>
+        <sphereGeometry args={[0.12, 36, 36]} />
+        <meshStandardMaterial
+          color={colors.reactor}
+          emissive={colors.reactor}
+          emissiveIntensity={1.75}
+          metalness={0.22}
+          roughness={0.12}
+        />
+      </mesh>
+      <mesh position={[0, 0.19, 0.405]}>
+        <torusGeometry args={[0.34, 0.01, 10, 96]} />
+        <meshBasicMaterial color={colors.reactor} transparent opacity={0.72} />
+      </mesh>
+    </group>
+  );
+}
+
+function Helmet() {
+  const colors = useSuitStore((state) => state.colors);
+
+  return (
+    <group>
+      <ArmorMesh part="helmet" position={[0, 1.07, 0]}>
+        <boxGeometry args={[0.66, 0.6, 0.58]} />
+      </ArmorMesh>
+      <ArmorMesh part="helmet" position={[0, 1.42, -0.03]}>
+        <boxGeometry args={[0.48, 0.16, 0.42]} />
+      </ArmorMesh>
+      <mesh castShadow position={[-0.15, 1.1, 0.32]}>
+        <boxGeometry args={[0.19, 0.06, 0.035]} />
+        <meshStandardMaterial
+          color="#071210"
+          emissive={colors.reactor}
+          emissiveIntensity={1.55}
+          metalness={0.48}
+          roughness={0.12}
+        />
+      </mesh>
+      <mesh castShadow position={[0.15, 1.1, 0.32]}>
+        <boxGeometry args={[0.19, 0.06, 0.035]} />
+        <meshStandardMaterial
+          color="#071210"
+          emissive={colors.reactor}
+          emissiveIntensity={1.55}
+          metalness={0.48}
+          roughness={0.12}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+function Shoulders() {
+  return (
+    <group>
+      <ArmorMesh part="shoulders" position={[-0.92, 0.58, 0]} rotation={[0, 0, -0.12]}>
+        <boxGeometry args={[0.62, 0.28, 0.64]} />
+      </ArmorMesh>
+      <ArmorMesh part="shoulders" position={[0.92, 0.58, 0]} rotation={[0, 0, 0.12]}>
+        <boxGeometry args={[0.62, 0.28, 0.64]} />
+      </ArmorMesh>
+      <ArmorMesh part="shoulders" position={[-1.05, 0.45, 0.05]} rotation={[0.18, 0.08, -0.22]}>
+        <coneGeometry args={[0.3, 0.45, 4]} />
+      </ArmorMesh>
+      <ArmorMesh part="shoulders" position={[1.05, 0.45, 0.05]} rotation={[0.18, -0.08, 0.22]}>
+        <coneGeometry args={[0.3, 0.45, 4]} />
+      </ArmorMesh>
+    </group>
+  );
+}
+
+function Arm({ side }: { side: -1 | 1 }) {
+  const colors = useSuitStore((state) => state.colors);
+
+  return (
+    <group>
+      <ArmorMesh part="arms" position={[side * 1.14, 0.05, 0]} rotation={[0, 0, side * 0.16]}>
+        <cylinderGeometry args={[0.18, 0.21, 0.78, 24]} />
+      </ArmorMesh>
+      <ArmorMesh part="forearms" position={[side * 1.32, -0.58, 0.03]} rotation={[0, 0, side * 0.08]}>
+        <boxGeometry args={[0.32, 0.62, 0.38]} />
+      </ArmorMesh>
+      <ArmorMesh part="forearms" position={[side * 1.46, -0.59, 0.18]} rotation={[0, 0, side * 0.08]} emissiveBoost={0.22}>
+        <boxGeometry args={[0.08, 0.48, 0.08]} />
+      </ArmorMesh>
+      <ArmorMesh part="hands" position={[side * 1.36, -1.02, 0.04]}>
+        <sphereGeometry args={[0.18, 22, 22]} />
+      </ArmorMesh>
+      <mesh position={[side * 1.37, -1.03, 0.22]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.09, 0.1, 0.08, 24]} />
+        <meshStandardMaterial
+          color={colors.reactor}
+          emissive={colors.reactor}
+          emissiveIntensity={0.72}
+          metalness={0.6}
+          roughness={0.18}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+function Leg({ side }: { side: -1 | 1 }) {
+  return (
+    <group>
+      <ArmorMesh part="legs" position={[side * 0.38, -1.18, 0]} rotation={[0, 0, side * -0.03]}>
+        <boxGeometry args={[0.34, 0.86, 0.4]} />
+      </ArmorMesh>
+      <ArmorMesh part="legs" position={[side * 0.44, -1.72, 0.02]} rotation={[0, 0, side * 0.04]}>
+        <boxGeometry args={[0.32, 0.72, 0.34]} />
+      </ArmorMesh>
+      <ArmorMesh part="boots" position={[side * 0.45, -2.16, 0.12]}>
+        <boxGeometry args={[0.5, 0.22, 0.76]} />
+      </ArmorMesh>
+      <ArmorMesh part="boots" position={[side * 0.45, -2.05, -0.18]}>
+        <cylinderGeometry args={[0.14, 0.17, 0.22, 24]} />
+      </ArmorMesh>
+    </group>
+  );
+}
+
+function BackReactor() {
+  const colors = useSuitStore((state) => state.colors);
+
+  return (
+    <group position={[0, 0.02, -0.4]}>
+      <ArmorMesh part="back" position={[0, 0.1, 0]} emissiveBoost={0.12}>
+        <boxGeometry args={[0.58, 0.92, 0.2]} />
+      </ArmorMesh>
+      <ArmorMesh part="back" position={[-0.36, -0.12, -0.08]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.12, 0.16, 0.72, 24]} />
+      </ArmorMesh>
+      <ArmorMesh part="back" position={[0.36, -0.12, -0.08]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.12, 0.16, 0.72, 24]} />
+      </ArmorMesh>
+      <mesh position={[0, 0.18, -0.13]} rotation={[0, 0, 0]}>
+        <torusGeometry args={[0.22, 0.025, 16, 64]} />
+        <meshStandardMaterial
+          color={colors.reactor}
+          emissive={colors.reactor}
+          emissiveIntensity={1.1}
+          metalness={0.35}
+          roughness={0.16}
+        />
+      </mesh>
+      {[-0.36, 0.36].map((x) => (
+        <pointLight
+          key={x}
+          position={[x, -0.48, -0.44]}
+          color="#f97316"
+          intensity={0.75}
+          distance={1.9}
+        />
+      ))}
+    </group>
+  );
+}
+
+function ArmorMesh({
+  part,
+  children,
+  position,
+  rotation,
+  scale,
+  emissiveBoost = 0
+}: ArmorMeshProps) {
   const selectedPart = useSuitStore((state) => state.selectedPart);
   const setSelectedPart = useSuitStore((state) => state.setSelectedPart);
   const colors = useSuitStore((state) => state.colors);
@@ -115,57 +348,143 @@ function ArmorMesh({ part, children, position, rotation, scale }: ArmorMeshProps
   const color = colors[part];
 
   return (
-    <mesh castShadow receiveShadow position={position} rotation={rotation} scale={scale} onPointerDown={(event) => { event.stopPropagation(); setSelectedPart(part); }}>
+    <mesh
+      castShadow
+      receiveShadow
+      position={position}
+      rotation={rotation}
+      scale={scale}
+      onPointerDown={(event) => {
+        event.stopPropagation();
+        setSelectedPart(part);
+      }}
+    >
       {children}
-      <meshStandardMaterial color={color} emissive={active ? color : "#020605"} emissiveIntensity={active ? 0.36 : 0.04} metalness={0.88} roughness={0.22} />
-      <Edges color={active ? "#e9fffb" : "#163936"} threshold={20} />
+      <meshStandardMaterial
+        color={color}
+        emissive={active || emissiveBoost ? color : "#020605"}
+        emissiveIntensity={(active ? 0.38 : 0.04) + emissiveBoost}
+        metalness={0.9}
+        roughness={0.2}
+        envMapIntensity={1.15}
+      />
+      <Edges color={active ? "#e9fffb" : "#173936"} threshold={22} />
     </mesh>
   );
-}
-
-function WeaponModule() {
-  const weapon = useSuitStore((state) => state.weapon);
-  const colors = useSuitStore((state) => state.colors);
-
-  if (weapon === "rail") {
-    return <group position={[1.63, -0.58, 0.12]} rotation={[0, 0, -0.05]}><mesh castShadow><boxGeometry args={[0.18, 0.96, 0.18]} /><meshStandardMaterial color="#d8e3e1" emissive={colors.reactor} emissiveIntensity={0.18} metalness={0.92} roughness={0.2} /><Edges color="#67e8f9" /></mesh></group>;
-  }
-
-  if (weapon === "micro") {
-    return <group position={[1.55, -0.48, 0.23]} rotation={[Math.PI / 2, 0, 0]}>{[-0.16, 0, 0.16].map((x) => <mesh castShadow key={x} position={[x, 0, 0]}><cylinderGeometry args={[0.045, 0.045, 0.46, 18]} /><meshStandardMaterial color="#cbd5e1" emissive="#f97316" emissiveIntensity={0.25} metalness={0.8} roughness={0.24} /></mesh>)}</group>;
-  }
-
-  if (weapon === "arc") {
-    return <group position={[1.52, -0.58, 0.25]} rotation={[0, Math.PI / 2, 0]}><mesh castShadow><torusGeometry args={[0.18, 0.025, 16, 54]} /><meshStandardMaterial color={colors.reactor} emissive={colors.reactor} emissiveIntensity={1.1} metalness={0.45} roughness={0.16} /></mesh><pointLight color={colors.reactor} intensity={0.8} distance={1.8} /></group>;
-  }
-
-  return <group position={[1.52, -0.72, 0.2]} rotation={[Math.PI / 2, 0, 0]}><mesh castShadow><cylinderGeometry args={[0.13, 0.16, 0.36, 24]} /><meshStandardMaterial color={colors.reactor} emissive={colors.reactor} emissiveIntensity={0.85} metalness={0.6} roughness={0.18} /></mesh></group>;
 }
 
 function UpgradeModule({ upgrade }: { upgrade: string }) {
   const colors = useSuitStore((state) => state.colors);
 
   if (upgrade === "kinetic") {
-    return <group>{[-0.72, 0.72].map((x) => <mesh key={x} castShadow position={[x, 0, 0.38]} rotation={[0, 0, x > 0 ? -0.2 : 0.2]}><boxGeometry args={[0.26, 0.82, 0.06]} /><meshStandardMaterial color="#d8e3e1" emissive={colors.reactor} emissiveIntensity={0.1} metalness={0.9} roughness={0.2} /></mesh>)}</group>;
+    return (
+      <group>
+        {[-0.72, 0.72].map((x) => (
+          <ArmorMesh
+            key={x}
+            part="chest"
+            position={[x, 0.02, 0.42]}
+            rotation={[0, 0, x > 0 ? -0.2 : 0.2]}
+          >
+            <boxGeometry args={[0.24, 0.78, 0.06]} />
+          </ArmorMesh>
+        ))}
+      </group>
+    );
   }
 
   if (upgrade === "stealth") {
-    return <group>{[-0.56, 0.56].map((x) => <mesh key={x} castShadow position={[x, 0.38, -0.18]} rotation={[0, x > 0 ? 0.28 : -0.28, 0]}><coneGeometry args={[0.22, 0.78, 4]} /><meshStandardMaterial color="#111827" emissive="#22c55e" emissiveIntensity={0.08} metalness={0.82} roughness={0.28} /></mesh>)}</group>;
+    return (
+      <group>
+        {[-0.58, 0.58].map((x) => (
+          <ArmorMesh
+            key={x}
+            part="back"
+            position={[x, 0.36, -0.26]}
+            rotation={[0, x > 0 ? 0.28 : -0.28, 0]}
+          >
+            <coneGeometry args={[0.22, 0.78, 4]} />
+          </ArmorMesh>
+        ))}
+      </group>
+    );
   }
 
   if (upgrade === "nanoweave") {
-    return <group>{[-0.36, 0, 0.36].map((x) => <mesh key={x} position={[x, -0.08, 0.37]}><boxGeometry args={[0.035, 1.14, 0.035]} /><meshStandardMaterial color={colors.reactor} emissive={colors.reactor} emissiveIntensity={0.95} metalness={0.35} roughness={0.2} /></mesh>)}</group>;
+    return (
+      <group>
+        {[-0.36, 0, 0.36].map((x) => (
+          <mesh key={x} position={[x, -0.08, 0.43]}>
+            <boxGeometry args={[0.032, 1.18, 0.032]} />
+            <meshStandardMaterial
+              color={colors.reactor}
+              emissive={colors.reactor}
+              emissiveIntensity={1}
+              metalness={0.34}
+              roughness={0.18}
+            />
+          </mesh>
+        ))}
+      </group>
+    );
   }
 
-  return <group>{[-0.34, 0.34].map((x) => <mesh key={x} castShadow position={[x, -0.06, -0.42]} rotation={[Math.PI / 2, 0, 0]}><cylinderGeometry args={[0.12, 0.16, 0.62, 24]} /><meshStandardMaterial color="#475569" emissive="#f97316" emissiveIntensity={0.35} metalness={0.9} roughness={0.22} /></mesh>)}</group>;
+  return null;
+}
+
+function HologramFloor() {
+  return (
+    <group>
+      <Grid
+        args={[12, 12]}
+        position={[0, -2.24, 0]}
+        cellSize={0.42}
+        cellThickness={0.45}
+        cellColor="#2dd4bf"
+        sectionSize={1.68}
+        sectionThickness={1}
+        sectionColor="#facc15"
+        fadeDistance={8}
+        fadeStrength={1.6}
+        infiniteGrid
+      />
+      <mesh position={[0, -2.23, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[1.25, 1.31, 96]} />
+        <meshBasicMaterial color="#55f0dd" transparent opacity={0.38} />
+      </mesh>
+      <mesh position={[0, -2.22, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[2.15, 2.17, 96]} />
+        <meshBasicMaterial color="#ffc857" transparent opacity={0.22} />
+      </mesh>
+    </group>
+  );
 }
 
 function LabScaffold() {
   return (
-    <group position={[0, 0, -1.2]}>
-      <mesh position={[0, 0.2, -0.44]}><boxGeometry args={[3.9, 3.25, 0.04]} /><meshBasicMaterial color="#0a1f1d" transparent opacity={0.38} /></mesh>
-      {[-2.1, 2.1].map((x) => <mesh key={x} position={[x, -0.18, -0.3]}><boxGeometry args={[0.08, 3.3, 0.08]} /><meshStandardMaterial color="#123633" emissive="#55f0dd" emissiveIntensity={0.25} metalness={0.4} roughness={0.25} /></mesh>)}
-      {[-1.4, 0, 1.4].map((x) => <mesh key={x} position={[x, 1.82, -0.18]}><boxGeometry args={[0.68, 0.04, 0.06]} /><meshBasicMaterial color="#55f0dd" transparent opacity={0.52} /></mesh>)}
+    <group position={[0, 0, -1.35]}>
+      <mesh position={[0, 0.22, -0.44]}>
+        <boxGeometry args={[4.5, 3.45, 0.04]} />
+        <meshBasicMaterial color="#0a1f1d" transparent opacity={0.34} />
+      </mesh>
+      {[-2.24, 2.24].map((x) => (
+        <mesh key={x} position={[x, -0.16, -0.3]}>
+          <boxGeometry args={[0.08, 3.42, 0.08]} />
+          <meshStandardMaterial
+            color="#123633"
+            emissive="#55f0dd"
+            emissiveIntensity={0.25}
+            metalness={0.45}
+            roughness={0.24}
+          />
+        </mesh>
+      ))}
+      {[-1.46, 0, 1.46].map((x) => (
+        <mesh key={x} position={[x, 1.87, -0.18]}>
+          <boxGeometry args={[0.72, 0.04, 0.06]} />
+          <meshBasicMaterial color="#55f0dd" transparent opacity={0.52} />
+        </mesh>
+      ))}
     </group>
   );
 }
