@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { type ReactNode, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Activity,
@@ -10,6 +10,7 @@ import {
   CircleDot,
   Cpu,
   Gauge,
+  Hand,
   Move3D,
   Paintbrush,
   Radar,
@@ -38,41 +39,59 @@ import {
 } from "@/lib/suit-store";
 import { RobotSuitCanvas } from "./robot-suit";
 
-const parts: Array<{ id: SuitPart; label: string; detail: string; icon: LucideIcon }> = [
-  { id: "helmet", label: "Helmet", detail: "Sensor crown and visor", icon: Bot },
-  { id: "chest", label: "Chest", detail: "Load frame and arc core", icon: Shield },
-  { id: "shoulders", label: "Shoulders", detail: "Impact fins and servos", icon: Box },
-  { id: "arms", label: "Arms", detail: "Gauntlets and hardpoints", icon: Swords },
-  { id: "legs", label: "Legs", detail: "Boot drives and stabilizers", icon: Move3D },
-  { id: "reactor", label: "Reactor", detail: "Emitter and pulse loops", icon: Zap }
+type PartMeta = {
+  id: SuitPart;
+  label: string;
+  detail: string;
+  icon: LucideIcon;
+};
+
+type OptionMeta<T extends string> = {
+  id: T;
+  label: string;
+  detail: string;
+  icon: LucideIcon;
+};
+
+const parts: PartMeta[] = [
+  { id: "helmet", label: "Helmet", detail: "Sensor crown and glowing visor", icon: Bot },
+  { id: "chest", label: "Chest Plate", detail: "Metal torso shell and core mount", icon: Shield },
+  { id: "shoulders", label: "Shoulder Armor", detail: "Servo caps and angular guards", icon: Box },
+  { id: "arms", label: "Arms", detail: "Upper actuators and bicep armor", icon: Swords },
+  { id: "forearms", label: "Forearms", detail: "Gauntlet rails and emitter housings", icon: Swords },
+  { id: "hands", label: "Hands", detail: "Grip actuators and palm emitters", icon: Hand },
+  { id: "legs", label: "Legs", detail: "Thigh plates and stabilizers", icon: Move3D },
+  { id: "boots", label: "Boots", detail: "Landing pads and thrust nozzles", icon: Move3D },
+  { id: "reactor", label: "Chest Reactor", detail: "Glowing arc emitter and pulse ring", icon: Zap },
+  { id: "back", label: "Back Reactor", detail: "Spine pack and rear thrusters", icon: Cpu }
 ];
 
-const swatches = [
-  ["Crimson", "#e11d48"],
-  ["Ember", "#f97316"],
-  ["Gold", "#facc15"],
-  ["Arc Cyan", "#67e8f9"],
-  ["Ion Green", "#22c55e"],
-  ["Titanium", "#94a3b8"],
-  ["Ceramic", "#f8fafc"],
-  ["Carbon", "#111827"]
-] as const;
+const colorSwatches = [
+  { name: "Crimson", value: "#e11d48" },
+  { name: "Ember", value: "#f97316" },
+  { name: "Gold", value: "#facc15" },
+  { name: "Arc Cyan", value: "#67e8f9" },
+  { name: "Ion Green", value: "#22c55e" },
+  { name: "Titanium", value: "#94a3b8" },
+  { name: "Ceramic", value: "#f8fafc" },
+  { name: "Carbon", value: "#111827" }
+];
 
-const weapons: Array<{ id: WeaponSystem; label: string; detail: string; icon: LucideIcon }> = [
+const weapons: OptionMeta<WeaponSystem>[] = [
   { id: "pulse", label: "Pulse Repulsor", detail: "High-energy palm discharge", icon: CircleDot },
   { id: "rail", label: "Rail Lance", detail: "Forearm linear accelerator", icon: Radar },
   { id: "micro", label: "Micro Rockets", detail: "Swarm payload module", icon: Swords },
   { id: "arc", label: "Arc Projector", detail: "Short range plasma field", icon: Zap }
 ];
 
-const upgrades: Array<{ id: ArmorUpgrade; label: string; icon: LucideIcon }> = [
-  { id: "flight", label: "Flight Pack", icon: Move3D },
-  { id: "kinetic", label: "Kinetic Shell", icon: Shield },
-  { id: "stealth", label: "Stealth Skin", icon: Sparkles },
-  { id: "nanoweave", label: "Nanoweave", icon: BrainCircuit }
+const upgrades: OptionMeta<ArmorUpgrade>[] = [
+  { id: "flight", label: "Flight Pack", detail: "Back thrusters and boot lift", icon: Move3D },
+  { id: "kinetic", label: "Kinetic Shell", detail: "Layered shock plates", icon: Shield },
+  { id: "stealth", label: "Stealth Skin", detail: "Low signature outer facets", icon: Sparkles },
+  { id: "nanoweave", label: "Nanoweave", detail: "Adaptive lattice routing", icon: BrainCircuit }
 ];
 
-const assistantModes: Array<{ id: AssistantMode; label: string; detail: string; icon: LucideIcon }> = [
+const assistantModes: OptionMeta<AssistantMode>[] = [
   { id: "tactical", label: "Tactical", detail: "Threat map active", icon: Radar },
   { id: "diagnostic", label: "Diagnostic", detail: "Telemetry scan active", icon: Activity },
   { id: "cinematic", label: "Cinematic", detail: "Showcase lighting active", icon: Volume2 }
@@ -126,7 +145,7 @@ export function ArmorConfigurator() {
               <Cpu className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <h1 className="truncate text-lg font-semibold md:text-2xl">X42 Armor Lab</h1>
+              <h1 className="truncate text-lg font-semibold text-foreground md:text-2xl">X42 Armor Lab</h1>
               <p className="truncate text-xs text-muted-foreground">{selectedPartMeta.label} tuning protocol active</p>
             </div>
           </div>
@@ -143,6 +162,7 @@ export function ArmorConfigurator() {
             {parts.map((part) => {
               const Icon = part.icon;
               const active = selectedPart === part.id;
+
               return (
                 <button
                   key={part.id}
@@ -159,7 +179,7 @@ export function ArmorConfigurator() {
                     <Icon className="h-5 w-5" />
                   </span>
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium">{part.label}</span>
+                    <span className="block truncate text-sm font-medium text-foreground">{part.label}</span>
                     <span className="block truncate text-xs text-muted-foreground">{part.detail}</span>
                   </span>
                   <span className="h-3 w-3 rounded-sm border border-white/20" style={{ backgroundColor: colors[part.id] }} />
@@ -168,18 +188,17 @@ export function ArmorConfigurator() {
             })}
           </div>
           <div className="mt-4 grid gap-3 rounded-lg border border-border bg-background/40 p-3">
-            <Readout label="Armor density" value={armorDensity} />
-            <Readout label="Reactor output" value={reactorOutput} />
-            <Readout label="Shield bias" value={shieldBias} />
+            <Readout label="Armor density" value={armorDensity} tone="primary" />
+            <Readout label="Reactor output" value={reactorOutput} tone="cyan" />
+            <Readout label="Shield bias" value={shieldBias} tone="amber" />
           </div>
           <div className="mt-4 flex items-center justify-between rounded-lg border border-border bg-secondary/25 p-3">
             <div>
-              <p className="text-sm font-medium">Factory baseline</p>
+              <p className="text-sm font-medium text-foreground">Factory baseline</p>
               <p className="text-xs text-muted-foreground">Restore the default suit</p>
             </div>
             <Button variant="secondary" size="sm" onClick={resetSuit}>
-              <Undo2 className="h-4 w-4" />
-              Restore
+              <Undo2 className="h-4 w-4" /> Restore
             </Button>
           </div>
         </Panel>
@@ -201,8 +220,8 @@ export function ArmorConfigurator() {
           <RobotSuitCanvas />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 p-4">
             <div className="grid gap-2 rounded-lg border border-border bg-background/60 p-3 backdrop-blur-md md:grid-cols-3">
-              <Telemetry label="Weapon" value={weapons.find((item) => item.id === weapon)?.label ?? weapon} />
-              <Telemetry label="Upgrade" value={upgrades.find((item) => item.id === upgrade)?.label ?? upgrade} />
+              <Telemetry label="Weapon" value={labelFor(weapons, weapon)} />
+              <Telemetry label="Upgrade" value={labelFor(upgrades, upgrade)} />
               <Telemetry label="Assistant" value={selectedAssistant.label} />
             </div>
           </div>
@@ -210,22 +229,23 @@ export function ArmorConfigurator() {
 
         <Panel className="order-3 min-h-[520px] lg:order-none">
           <PanelHeader icon={Sparkles} eyebrow="Fabrication" title="Loadout" action={<Badge>{saveStatus}</Badge>} />
-
           <section className="mt-4">
             <SectionTitle icon={Paintbrush} title={`${selectedPartMeta.label} color`} />
             <div className="mt-3 grid grid-cols-4 gap-2">
-              {swatches.map(([name, value]) => (
+              {colorSwatches.map((swatch) => (
                 <button
-                  key={value}
+                  key={swatch.value}
                   type="button"
-                  aria-label={`Set ${selectedPartMeta.label} to ${name}`}
-                  title={name}
-                  onClick={() => setPartColor(selectedPart, value)}
+                  aria-label={`Set ${selectedPartMeta.label} to ${swatch.name}`}
+                  title={swatch.name}
+                  onClick={() => setPartColor(selectedPart, swatch.value)}
                   className={cn(
                     "h-10 rounded-md border transition",
-                    colors[selectedPart] === value ? "border-primary ring-2 ring-primary/40" : "border-white/15 hover:border-primary/60"
+                    colors[selectedPart] === swatch.value
+                      ? "border-primary ring-2 ring-primary/40"
+                      : "border-white/15 hover:border-primary/60"
                   )}
-                  style={{ backgroundColor: value }}
+                  style={{ backgroundColor: swatch.value }}
                 />
               ))}
             </div>
@@ -234,14 +254,18 @@ export function ArmorConfigurator() {
           <section className="mt-5">
             <SectionTitle icon={Swords} title="Weapons" />
             <div className="mt-3 grid gap-2">
-              {weapons.map((item) => <Option key={item.id} active={weapon === item.id} icon={item.icon} label={item.label} detail={item.detail} onClick={() => setWeapon(item.id)} />)}
+              {weapons.map((item) => (
+                <OptionButton key={item.id} active={weapon === item.id} icon={item.icon} label={item.label} detail={item.detail} onClick={() => setWeapon(item.id)} />
+              ))}
             </div>
           </section>
 
           <section className="mt-5">
             <SectionTitle icon={Shield} title="Armor upgrades" />
             <div className="mt-3 grid grid-cols-2 gap-2">
-              {upgrades.map((item) => <CompactOption key={item.id} active={upgrade === item.id} icon={item.icon} label={item.label} onClick={() => setUpgrade(item.id)} />)}
+              {upgrades.map((item) => (
+                <CompactOption key={item.id} active={upgrade === item.id} icon={item.icon} label={item.label} onClick={() => setUpgrade(item.id)} />
+              ))}
             </div>
           </section>
 
@@ -251,7 +275,9 @@ export function ArmorConfigurator() {
               <Switch checked={assistantMode !== "diagnostic"} onClick={() => setAssistantMode(assistantMode === "diagnostic" ? "tactical" : "diagnostic")} aria-label="Toggle assistant tactical mode" />
             </div>
             <div className="mt-3 grid gap-2">
-              {assistantModes.map((mode) => <Option key={mode.id} active={assistantMode === mode.id} icon={mode.icon} label={mode.label} detail={mode.detail} onClick={() => setAssistantMode(mode.id)} />)}
+              {assistantModes.map((mode) => (
+                <OptionButton key={mode.id} active={assistantMode === mode.id} icon={mode.icon} label={mode.label} detail={mode.detail} onClick={() => setAssistantMode(mode.id)} />
+              ))}
             </div>
           </section>
         </Panel>
@@ -287,18 +313,22 @@ export function ArmorConfigurator() {
   );
 }
 
-function Panel({ className, children }: { className?: string; children: React.ReactNode }) {
-  return <motion.aside initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className={cn("hologram-panel thin-scrollbar overflow-auto rounded-lg p-4", className)}>{children}</motion.aside>;
+function Panel({ className, children }: { className?: string; children: ReactNode }) {
+  return (
+    <motion.aside initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className={cn("hologram-panel thin-scrollbar overflow-auto rounded-lg p-4", className)}>
+      {children}
+    </motion.aside>
+  );
 }
 
-function PanelHeader({ icon: Icon, eyebrow, title, action }: { icon: LucideIcon; eyebrow: string; title: string; action?: React.ReactNode }) {
+function PanelHeader({ icon: Icon, eyebrow, title, action }: { icon: LucideIcon; eyebrow: string; title: string; action?: ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-3">
       <div className="flex min-w-0 items-center gap-3">
         <div className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-primary/30 bg-primary/10 text-primary"><Icon className="h-5 w-5" /></div>
         <div className="min-w-0">
           <p className="truncate font-mono text-xs uppercase text-muted-foreground">{eyebrow}</p>
-          <h2 className="truncate text-xl font-semibold">{title}</h2>
+          <h2 className="truncate text-xl font-semibold text-foreground">{title}</h2>
         </div>
       </div>
       {action}
@@ -307,14 +337,14 @@ function PanelHeader({ icon: Icon, eyebrow, title, action }: { icon: LucideIcon;
 }
 
 function SectionTitle({ icon: Icon, title }: { icon: LucideIcon; title: string }) {
-  return <div className="flex items-center gap-2 text-sm font-medium"><Icon className="h-4 w-4 text-primary" />{title}</div>;
+  return <div className="flex items-center gap-2 text-sm font-medium text-foreground"><Icon className="h-4 w-4 text-primary" />{title}</div>;
 }
 
-function Option({ active, icon: Icon, label, detail, onClick }: { active: boolean; icon: LucideIcon; label: string; detail: string; onClick: () => void }) {
+function OptionButton({ active, icon: Icon, label, detail, onClick }: { active: boolean; icon: LucideIcon; label: string; detail: string; onClick: () => void }) {
   return (
     <button type="button" onClick={onClick} className={cn("grid grid-cols-[34px_1fr] items-center gap-3 rounded-lg border p-2.5 text-left transition", active ? "border-primary/70 bg-primary/10" : "border-border bg-secondary/25 hover:border-primary/40 hover:bg-secondary/50")}>
       <span className="grid h-8 w-8 place-items-center rounded-md border border-border bg-background/70 text-primary"><Icon className="h-4 w-4" /></span>
-      <span className="min-w-0"><span className="block truncate text-sm font-medium">{label}</span><span className="block truncate text-xs text-muted-foreground">{detail}</span></span>
+      <span className="min-w-0"><span className="block truncate text-sm font-medium text-foreground">{label}</span><span className="block truncate text-xs text-muted-foreground">{detail}</span></span>
     </button>
   );
 }
@@ -323,13 +353,15 @@ function CompactOption({ active, icon: Icon, label, onClick }: { active: boolean
   return (
     <button type="button" onClick={onClick} className={cn("flex min-h-20 flex-col items-start justify-between rounded-lg border p-3 text-left transition", active ? "border-primary/70 bg-primary/10" : "border-border bg-secondary/25 hover:border-primary/40 hover:bg-secondary/50")}>
       <Icon className="h-5 w-5 text-primary" />
-      <span className="text-sm font-medium">{label}</span>
+      <span className="text-sm font-medium text-foreground">{label}</span>
     </button>
   );
 }
 
-function Readout({ label, value }: { label: string; value: number }) {
-  return <div><div className="mb-1 flex items-center justify-between gap-3 text-xs"><span className="text-muted-foreground">{label}</span><span className="font-mono">{value}%</span></div><div className="h-1.5 overflow-hidden rounded-sm bg-secondary"><div className="h-full rounded-sm bg-primary" style={{ width: `${value}%` }} /></div></div>;
+function Readout({ label, value, tone }: { label: string; value: number; tone: "primary" | "cyan" | "amber" }) {
+  const color = tone === "amber" ? "bg-amber-300" : tone === "cyan" ? "bg-cyan-300" : "bg-primary";
+
+  return <div><div className="mb-1 flex items-center justify-between gap-3 text-xs"><span className="text-muted-foreground">{label}</span><span className="font-mono text-foreground">{value}%</span></div><div className="h-1.5 overflow-hidden rounded-sm bg-secondary"><div className={cn("h-full rounded-sm", color)} style={{ width: `${value}%` }} /></div></div>;
 }
 
 function ControlSlider({ label, value, onValueChange }: { label: string; value: number; onValueChange: (value: number) => void }) {
@@ -337,5 +369,9 @@ function ControlSlider({ label, value, onValueChange }: { label: string; value: 
 }
 
 function Telemetry({ label, value }: { label: string; value: string }) {
-  return <div className="min-w-0"><p className="truncate font-mono text-[11px] uppercase text-muted-foreground">{label}</p><p className="truncate text-sm font-medium">{value}</p></div>;
+  return <div className="min-w-0"><p className="truncate font-mono text-[11px] uppercase text-muted-foreground">{label}</p><p className="truncate text-sm font-medium text-foreground">{value}</p></div>;
+}
+
+function labelFor<T extends string>(items: Array<{ id: T; label: string }>, value: T) {
+  return items.find((item) => item.id === value)?.label ?? value;
 }
