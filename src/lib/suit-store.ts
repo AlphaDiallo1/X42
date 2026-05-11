@@ -6,8 +6,12 @@ export type SuitPart =
   | "helmet"
   | "chest"
   | "arms"
+  | "forearms"
+  | "hands"
   | "legs"
+  | "boots"
   | "reactor"
+  | "back"
   | "shoulders";
 
 export type WeaponSystem = "pulse" | "rail" | "micro" | "arc";
@@ -20,8 +24,12 @@ const defaultColors: SuitColors = {
   helmet: "#e11d48",
   chest: "#b91c1c",
   arms: "#f97316",
+  forearms: "#c2410c",
+  hands: "#94a3b8",
   legs: "#111827",
+  boots: "#0f172a",
   reactor: "#67e8f9",
+  back: "#475569",
   shoulders: "#facc15"
 };
 
@@ -88,8 +96,12 @@ function randomColors(): SuitColors {
     helmet: randomItem(palettes),
     chest: randomItem(palettes),
     arms: randomItem(palettes),
+    forearms: randomItem(palettes),
+    hands: randomItem(palettes),
     legs: randomItem(palettes),
+    boots: randomItem(palettes),
     reactor: randomItem(palettes),
+    back: randomItem(palettes),
     shoulders: randomItem(palettes)
   };
 }
@@ -143,8 +155,12 @@ export const useSuitStore = create<SuitState>((set, get) => ({
         "helmet",
         "chest",
         "arms",
+        "forearms",
+        "hands",
         "legs",
+        "boots",
         "reactor",
+        "back",
         "shoulders"
       ]),
       colors: randomColors(),
@@ -175,6 +191,10 @@ export const useSuitStore = create<SuitState>((set, get) => ({
       const payload = JSON.parse(saved) as SavePayload;
       set({
         ...payload,
+        colors: {
+          ...defaultColors,
+          ...(payload.colors ?? {})
+        },
         saveStatus: "Recovered saved build"
       });
     } catch {
